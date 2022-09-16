@@ -1,12 +1,11 @@
-package com.example.todolistapp.item;
+package com.example.todolistapp.model;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import org.springframework.http.HttpStatus;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.sql.Date;
 
 
@@ -17,7 +16,7 @@ import java.sql.Date;
 public class Item {
 
     @Id
-    private String name;
+    private String itemName;
     private String description;
     private Date deadline;
     private boolean completed = Boolean.FALSE;
@@ -28,9 +27,9 @@ public class Item {
     }
 
 
-    public Item(String name, String description, Date deadline, Boolean completed, HttpStatus status) {
+    public Item(String itemName, String description, Date deadline, Boolean completed, HttpStatus status) {
         super();
-        this.name = name;
+        this.itemName = itemName;
         this.description = description;
         this.deadline = deadline;
         this.completed = completed;

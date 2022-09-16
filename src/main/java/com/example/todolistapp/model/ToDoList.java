@@ -1,6 +1,5 @@
-package com.example.todolistapp.todolist;
+package com.example.todolistapp.model;
 
-import com.example.todolistapp.item.Item;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

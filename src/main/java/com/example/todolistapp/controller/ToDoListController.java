@@ -1,12 +1,14 @@
-package com.example.todolistapp.todolist;
+package com.example.todolistapp.controller;
 
-import com.example.todolistapp.item.Item;
-import com.example.todolistapp.item.ItemService;
+import com.example.todolistapp.model.Item;
+import com.example.todolistapp.service.ItemService;
+import com.example.todolistapp.model.ToDoList;
+import com.example.todolistapp.service.ToDoListService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.sql.Date;
 import java.util.*;
 
@@ -17,56 +19,55 @@ public class ToDoListController {
     private ToDoListService toDoListService;
     @Autowired
     private ItemService itemService;
-    private ToDoList listByName;
 
-    @RequestMapping("/lists")
+    @GetMapping("/lists")
     public List<ToDoList> getAllLists(){
         return toDoListService.getAllLists();
     }
 
-    @RequestMapping("/lists/{listName}")
-    public ToDoList getListByName(@PathVariable String listName){
+    @GetMapping("/lists/{listName}")
+    public ToDoList getListByName(@Valid @PathVariable String listName){
         return toDoListService.getListByName(listName);
     }
 
-    @RequestMapping(method = RequestMethod.POST, value="/lists")
+    @PostMapping("/lists")
     public void addList(@RequestBody ToDoList list){
         toDoListService.addList(list);
     }
 
-    @RequestMapping(method = RequestMethod.DELETE, value="/lists/{listName}")
-    public void deleteListByName(@PathVariable String listName){
+    @DeleteMapping("/lists/{listName}")
+    public void deleteListByName(@Valid @PathVariable String listName) {
         toDoListService.deleteListByName(listName);
     }
 
-    @RequestMapping(method = RequestMethod.PUT, value="/lists/{listName}/items/{newItemName}")
-    public void addItem(@PathVariable String listName, @PathVariable String newItemName){
-        getListByName(listName).getListItems().add(new Item(newItemName,"",null,false, HttpStatus.CREATED));
+    @PutMapping("/lists/{listName}/items/name/{newItemName}/desc/{description}/date/{date}")
+    public void addItem(@Valid @PathVariable String listName, @Valid @PathVariable String newItemName, @PathVariable String description, @PathVariable Date date){
+        getListByName(listName).getListItems().add(new Item(newItemName,description,date,false, HttpStatus.CREATED));
         toDoListService.addItem(getListByName(listName));
 }
 
-    @RequestMapping(method = RequestMethod.DELETE, value = "/lists/{listName}/items/{itemName}")
-    public void deleteItem(@PathVariable String listName, @PathVariable String itemName){
+    @DeleteMapping( "/lists/{listName}/items/{itemName}")
+    public void deleteItem(@Valid @PathVariable String listName, @Valid @PathVariable String itemName){
         getListByName(listName).getListItems().remove(itemService.getItemByName(itemName));
         toDoListService.deleteItem(getListByName(listName));
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/lists/{listName}/filterstatuscomplete")
-    public List<Item> filterItemsStatusComplete(@PathVariable String listName) {
+    @GetMapping( "/lists/{listName}/filterstatuscomplete")
+    public List<Item> filterItemsStatusComplete(@Valid @PathVariable String listName) {
         List<Item> items = getListByName(listName).getListItems();
         List<Item> filteredItems = new ArrayList<>();
         items.stream().
-                filter(item -> statusIsComplete(item.getName())).forEach(filteredItems::add);
+                filter(item -> statusIsComplete(item.getItemName())).forEach(filteredItems::add);
 
         return filteredItems;
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/lists/{listName}/filterstatusnotcomplete")
-    public List<Item> filterItemsStatusNotComplete(@PathVariable String listName) {
+    @GetMapping( "/lists/{listName}/filterstatusnotcomplete")
+    public List<Item> filterItemsStatusNotComplete(@Valid @PathVariable String listName) {
         List<Item> items = getListByName(listName).getListItems();
         List<Item> filteredItems = new ArrayList<>();
         items.stream().
-                filter(item -> !statusIsComplete(item.getName())).forEach(filteredItems::add);
+                filter(item -> !statusIsComplete(item.getItemName())).forEach(filteredItems::add);
 
         return filteredItems;
     }
@@ -75,12 +76,12 @@ public class ToDoListController {
         return itemService.getItemByName(itemName).getStatus().equals(HttpStatus.IM_USED);
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/lists/{listName}/filteritemsexpired")
-    public List<Item> filterItemsExpired(@PathVariable String listName) {
+    @GetMapping( "/lists/{listName}/filteritemsexpired")
+    public List<Item> filterItemsExpired(@Valid @PathVariable String listName) {
         List<Item> items = getListByName(listName).getListItems();
         List<Item> filteredItems = new ArrayList<>();
         items.stream().
-                filter(item -> itemExpired(item.getName())).forEach(filteredItems::add);
+                filter(item -> itemExpired(item.getItemName())).forEach(filteredItems::add);
 
         return filteredItems;
     }
@@ -94,8 +95,8 @@ public class ToDoListController {
         return false;
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/lists/{listName}/orderby/{field}")
-    public List<Item> orderItemsByName(@PathVariable String listName, @PathVariable String field) {
+    @GetMapping( "/lists/{listName}/orderby/{field}")
+    public List<Item> orderItemsByName(@Valid @PathVariable String listName, @PathVariable String field) {
         List<Item> items = getListByName(listName).getListItems();
         List<Item> orderedItems = itemService.orderItemsByName(field);;
         for (Item item : orderedItems) {
