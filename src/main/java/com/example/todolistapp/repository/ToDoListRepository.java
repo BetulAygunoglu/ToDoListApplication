@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface ToDoListRepository extends JpaRepository<ToDoList, String> {
-    List<ToDoList> findByName(String listName);
 
+    List<ToDoList> findByName(String listName);
 
 }

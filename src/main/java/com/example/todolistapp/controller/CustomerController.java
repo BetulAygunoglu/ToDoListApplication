@@ -1,68 +1,81 @@
 package com.example.todolistapp.controller;
 
+import com.example.todolistapp.dto.CustomerDto;
+import com.example.todolistapp.dto.ToDoListDto;
 import com.example.todolistapp.model.Customer;
 import com.example.todolistapp.model.ToDoList;
 import com.example.todolistapp.request.CustomerRequest;
 import com.example.todolistapp.service.CustomerService;
 import com.example.todolistapp.service.ToDoListService;
+import org.modelmapper.ModelMapper;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 public class CustomerController {
 
     private CustomerService customerService;
     private ToDoListService toDoListService;
+    private final ModelMapper modelMapper;
 
-    public CustomerController(CustomerService customerService, ToDoListService toDoListService) {
+    public CustomerController(CustomerService customerService, ToDoListService toDoListService, ModelMapper modelMapper) {
         this.customerService = customerService;
         this.toDoListService = toDoListService;
+        this.modelMapper = modelMapper;
     }
 
     @GetMapping("/customers")
-    public List<Customer> getAllCustomers(){
+    public List<CustomerDto> getAllCustomers(){
         return customerService.getAllCustomers();
     }
+
     @GetMapping("/customers/{id}")
-    public Customer getCustomer(@PathVariable Long id){
+    public CustomerDto getCustomer(@PathVariable Long id){
         return customerService.getCustomer(id);
     }
     @PostMapping("/customers")
     public void addCustomer(@RequestBody CustomerRequest customerRequest){
-        Customer customer = new Customer();
-        customer.setCustomerName(customerRequest.getCustomerName());
-        customerService.addCustomer(customer);
+        CustomerDto customerDto = new CustomerDto();
+        customerDto.setCustomerName(customerRequest.getCustomerName());
+        customerService.addCustomer(customerDto);
     }
     @DeleteMapping("/customers/{id}")
     public void deleteCustomer(@PathVariable Long id){
         customerService.deleteCustomer(id);
     }
 
-    @PutMapping("/customers/{id}/lists/{newListName}/items/{items}")
+    @PutMapping("/customers/{id}/lists/{newListName}")
     public void addToDoList(@PathVariable Long id, @Valid @PathVariable String newListName){
-        getCustomer(id).getCustomersLists().add(new ToDoList(newListName));
-        customerService.addToDoList(getCustomer(id));
+        Customer customer = modelMapper.map(getCustomer(id), Customer.class);
+        customer.getCustomersLists().add(new ToDoList(newListName));
+        CustomerDto customerDto = modelMapper.map(customer, CustomerDto.class);
+        customerService.addToDoList(customerDto);
     }
 
     @DeleteMapping("/customers/{id}/lists/{listName}")
     public void deleteToDoList(@PathVariable Long id, @Valid @PathVariable String listName){
-        getCustomer(id).getCustomersLists().remove(toDoListService.getListByName(listName));
-        customerService.deleteToDoList(getCustomer(id));
+        Customer customer = modelMapper.map(getCustomer(id), Customer.class);
+        ToDoList toDoList = modelMapper.map(toDoListService.getListByName(listName), ToDoList.class);
+        customer.getCustomersLists().remove(toDoList);
+        customerService.deleteToDoList(id);
     }
 
-    @GetMapping( "/customers/{id}/orderby/{field}")
-    public List<ToDoList> orderListsByName(@Valid @PathVariable Long id, @PathVariable String field) {
-        List<ToDoList> customersLists = getCustomer(id).getCustomersLists();
-        List<ToDoList> orderedLists = toDoListService.orderListsByName(field);;
+    @GetMapping( "/customers/{id}/orderlistsby/{field}")
+    public List<ToDoListDto> orderListsByName(@Valid @PathVariable Long id, @PathVariable String field) {
+        Customer customer = modelMapper.map(getCustomer(id), Customer.class);
+        List<ToDoList> customersLists = customer.getCustomersLists();
+        List<ToDoList> orderedLists = toDoListService.orderListsByName(field);
         for (ToDoList toDoList : orderedLists) {
             if (!customersLists.contains(toDoList)) {
                 orderedLists.remove(toDoList);
             }
         }
 
-        return orderedLists;
+        return orderedLists.stream().map(list -> modelMapper.map(list, ToDoListDto.class)).collect(Collectors.toList());
     }
+
 
 }

@@ -1,9 +1,12 @@
 package com.example.todolistapp.controller;
 
+import com.example.todolistapp.dto.ItemDto;
+import com.example.todolistapp.dto.ToDoListDto;
 import com.example.todolistapp.model.Item;
 import com.example.todolistapp.service.ItemService;
 import com.example.todolistapp.model.ToDoList;
 import com.example.todolistapp.service.ToDoListService;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.sql.Date;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 public class ToDoListController {
@@ -19,21 +23,26 @@ public class ToDoListController {
     private ToDoListService toDoListService;
     @Autowired
     private ItemService itemService;
+    private final ModelMapper modelMapper;
+
+    public ToDoListController(ModelMapper modelMapper) {
+        this.modelMapper = modelMapper;
+    }
 
     @GetMapping("/lists")
-    public List<ToDoList> getAllLists(){
+    public List<ToDoListDto> getAllLists(){
         return toDoListService.getAllLists();
     }
 
     @GetMapping("/lists/{listName}")
-    public ToDoList getListByName(@Valid @PathVariable String listName){
+    public ToDoListDto getListByName(@Valid @PathVariable String listName){
         return toDoListService.getListByName(listName);
     }
 
-    @PostMapping("/lists")
-    public void addList(@RequestBody ToDoList list){
-        toDoListService.addList(list);
-    }
+//    @PostMapping("/lists")
+//    public void addList(@RequestBody ToDoListDto listDto){
+//        toDoListService.addList(listDto);
+//    }
 
     @DeleteMapping("/lists/{listName}")
     public void deleteListByName(@Valid @PathVariable String listName) {
@@ -42,14 +51,20 @@ public class ToDoListController {
 
     @PutMapping("/lists/{listName}/items/name/{newItemName}/desc/{description}/date/{date}")
     public void addItem(@Valid @PathVariable String listName, @Valid @PathVariable String newItemName, @PathVariable String description, @PathVariable Date date){
-        getListByName(listName).getListItems().add(new Item(newItemName,description,date,false, HttpStatus.CREATED));
-        toDoListService.addItem(getListByName(listName));
+        ToDoList toDoList = modelMapper.map(getListByName(listName), ToDoList.class);
+        toDoList.getListItems().add(new Item(newItemName,description,date,false, HttpStatus.CREATED));
+        ToDoListDto toDoListDto = modelMapper.map(toDoList, ToDoListDto.class);
+        toDoListService.addItem(toDoListDto);
 }
 
     @DeleteMapping( "/lists/{listName}/items/{itemName}")
     public void deleteItem(@Valid @PathVariable String listName, @Valid @PathVariable String itemName){
-        getListByName(listName).getListItems().remove(itemService.getItemByName(itemName));
-        toDoListService.deleteItem(getListByName(listName));
+        ToDoList toDoList = modelMapper.map(getListByName(listName), ToDoList.class);
+        ItemDto itemDto = itemService.getItemByName(itemName);
+        Item item = modelMapper.map(itemDto, Item.class);
+        toDoList.getListItems().remove(item);
+        ToDoListDto toDoListDto = modelMapper.map(toDoList, ToDoListDto.class);
+        toDoListService.deleteItem(toDoListDto);
     }
 
     @GetMapping( "/lists/{listName}/filterstatuscomplete")
@@ -95,17 +110,17 @@ public class ToDoListController {
         return false;
     }
 
-    @GetMapping( "/lists/{listName}/orderby/{field}")
-    public List<Item> orderItemsByName(@Valid @PathVariable String listName, @PathVariable String field) {
-        List<Item> items = getListByName(listName).getListItems();
-        List<Item> orderedItems = itemService.orderItemsByName(field);;
-        for (Item item : orderedItems) {
-            if (!items.contains(item)) {
-                orderedItems.remove(item);
-            }
-        }
-
-        return orderedItems;
+    @GetMapping( "/lists/{listName}/orderitemsby/{field}")
+    public List<ItemDto> orderItemsByName(@Valid @PathVariable String listName, @PathVariable String field) {
+        ToDoList toDoList = modelMapper.map(getListByName(listName), ToDoList.class);
+        List<Item> listItems = toDoList.getListItems();
+        List<Item> orderedItems = itemService.orderItemsByName(field);
+            for (Item item : orderedItems) {
+              if (!listItems.contains(item)) {
+                   orderedItems.remove(item);
+              }
+          }
+            return orderedItems.stream().map(item -> modelMapper.map(item, ItemDto.class)).collect(Collectors.toList());
     }
 
 
